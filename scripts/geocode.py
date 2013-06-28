@@ -53,14 +53,14 @@ class Processor(object):
             return None, (mls, addr)
         else:
             logging.debug("> Address: {}, Zone: {}".format(place, zone))
-            result = {'mls': mls, 'address': place, 'coords': (lat, lng),
-                      'zone': zone, 'price': price}
+            result = {'mls': mls, 'address': addr, 'lat': lat, 'lng': lng,
+                      'zone': zone, 'price': price, 'place': place}
             return result, None
 
 
 def write_to_csv(reslults, filename):
     with open(filename, "w") as fp:
-        c = csv.DictWriter(fp, ['mls', 'price', 'address', 'zone'],
+        c = csv.DictWriter(fp, ['mls', 'price', 'place', 'zone', 'lat', 'lng'],
                            extrasaction='ignore')
         c.writeheader()
         for result in results:
@@ -92,9 +92,14 @@ def process_redis(processor, redis_addr, process_all, key="listings"):
                 errors.append(error)
             else:
                 data['zone'] = result['zone']
+                data['lat'] = result['lat']
+                data['lng'] = result['lng']
+                data['place'] = result['place']
                 r.hset(key, mls, json.dumps(data))
                 results.append(result)
             time.sleep(0.5)
+        else:
+            results.append(data)
 
     return results, errors
 
@@ -109,6 +114,8 @@ if __name__ == "__main__":
     ap.add_argument('-r', '--redis', nargs='?', const="localhost:6379",
                     help="Use the given redis server instead of MLS files")
     ap.add_argument('-d', '--dir', help="Directory containing MLS files")
+    ap.add_argument('-a', '--all', help="Reprocess even if zone already in DB",
+                    action="store_true")
     ap.add_argument('-o', '--outputcsv', help="Filename to write the results")
     args = ap.parse_args()
 
@@ -125,7 +132,7 @@ if __name__ == "__main__":
     if args.dir:
         results, errors = processor.process_mls_dir(args.dir)
     else:
-        results, errors = process_redis(processor, args.redis, args.outputcsv)
+        results, errors = process_redis(processor, args.redis, args.all)
     if args.outputcsv:
         write_to_csv(results, args.outputcsv)
 
