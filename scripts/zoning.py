@@ -60,7 +60,8 @@ def load_from_kml(filename):
 
 def lookup_address(geocoder, zonedir, address):
     try:
-        place, (lat, lng) = geocoder.geocode(address)
+        results = geocoder.geocode(address, exactly_one=False)
+        place, (lat, lng) = results[0]
     except ValueError:
         return None, None, None
     zone = zonedir.lookup(lat, lng)
@@ -86,7 +87,7 @@ unzip zoning_districts.kmz zoning_districts.kml
     zonedir = load_from_kml(args.kml)
 
     print "Geocoding"
-    g = geocoders.GoogleV3()    
+    g = geocoders.GoogleV3()
     place, _, zone = lookup_address(g, zonedir, args.address)
     print "Found:", place
     print "Zone: ", zone
